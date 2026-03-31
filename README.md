@@ -19,7 +19,7 @@ Para mantener el código limpio y profesional, este proyecto utiliza una arquite
 | :--- | :--- |
 | 📁 `XBlock/` | **Framework Core:** Es un submódulo que apunta al repositorio oficial de Open edX. Contiene las clases base (`XBlock`, `Fragment`, `Scope`) necesarias para que el plugin exista. |
 | 📁 `xblock-sdk/` | **Workbench (Simulador):** Entorno de pruebas basado en Django. Permite levantar un servidor local (`localhost:8000`) para renderizar y probar el XBlock sin necesidad de instalar toda la plataforma LMS de edX. |
-| 📁 `ia_assistant/` | **(En desarrollo)** Directorio principal donde residirá la lógica de Python, los templates HTML y los estilos CSS de la Inteligencia Artificial. |
+| 📁 `ia_assistant_plugin/` | **(En desarrollo)** Directorio principal donde residirá la lógica de Python, los templates HTML y los estilos CSS de la Inteligencia Artificial. |
 | 📄 `.gitignore` | Configurado para excluir entornos virtuales (`venv/`), binarios de Python (`__pycache__`) y logs locales de bases de datos para mantener el repositorio ligero. |
 
 ---

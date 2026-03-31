@@ -93,6 +93,20 @@ python manage.py migrate
 
 ---
 
+### Paso 6: Instalar el Plugin Personalizado (IA Assistant)
+Para que el Workbench reconozca nuestro desarrollo, debemos instalar la carpeta del XBlock en el entorno virtual en modo editable (`-e`). Esto permite que cualquier cambio en el código Python o HTML se refleje en tiempo real sin necesidad de reinstalar.
+
+```powershell
+# 1. Ingresar a la carpeta externa del proyecto
+cd ia-assistant-plugin
+
+# 2. Instalar el plugin en el entorno virtual
+pip install -e .
+
+# 3. Volver a la raíz del repositorio
+cd ..
+```
+
 ### Ejecución del Servidor de Desarrollo
 
 Una vez instaladas las dependencias y migrada la base de datos, levanta el servidor. Usa el flag --noreload en Windows para evitar que el sistema operativo bloquee el archivo workbench.log por permisos de lectura múltiple.

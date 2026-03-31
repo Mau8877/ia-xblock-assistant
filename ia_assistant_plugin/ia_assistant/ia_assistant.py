@@ -1,4 +1,3 @@
-import pkg_resources
 from xblock.core import XBlock
 from xblock.fields import Scope, String
 from xblock.fragment import Fragment

@@ -1,0 +1,32 @@
+<div class="ia-master-container">
+    <div class="ia-header">
+        <h2>{unidad_titulo}</h2>
+    </div>
+
+    <div style="background: #fff3cd; padding: 15px; border: 1px solid #ffeeba; margin-bottom: 20px; font-family: monospace; font-size: 12px; overflow-x: auto;">
+        <details>
+            <summary><b>🛠️ Panel de Control Debug (Haz clic para ver)</b></summary>
+            <p><b>Prompt enviado por el docente:</b></p>
+            <pre style="background: #eee; padding: 5px;">{prompt_debug}</pre>
+            <hr>
+            <p><b>JSON guardado en la BD:</b></p>
+            <pre style="background: #eee; padding: 5px;">{unidad_json}</pre>
+        </details>
+    </div>
+
+    <div id="ia-components-wrapper">
+        {componentes_html}
+    </div>
+
+    </div>
+    <hr style="margin-top: 30px; border-top: 2px dashed #ccc;">
+
+    <div class="ia-master-actions">
+        <button id="btn-enviar-master" class="btn-primary">Enviar Evaluación Completa</button>
+        <div id="master-feedback" style="display: none; margin-top: 15px;"></div>
+    </div>
+    
+    <script type="application/json" id="master-json-debug">
+        {unidad_json}
+    </script>
+</div>

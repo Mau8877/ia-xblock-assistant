@@ -1,0 +1,36 @@
+.ia-component-quiz {
+    background-color: #ffffff;
+    padding: 25px;
+    margin-bottom: 25px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.ia-component-quiz h3 {
+    color: #0056D2;
+    margin-top: 0;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 10px;
+}
+.ia-pregunta {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 6px;
+    border-left: 4px solid #ccc;
+    transition: border-color 0.3s;
+}
+.ia-pregunta h4 {
+    margin-top: 0;
+    font-size: 16px;
+    color: #333;
+}
+.ia-opcion {
+    display: block;
+    margin-bottom: 10px;
+    cursor: pointer;
+    font-size: 15px;
+}
+.ia-opcion input {
+    margin-right: 8px;
+}

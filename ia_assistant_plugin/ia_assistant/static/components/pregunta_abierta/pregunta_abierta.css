@@ -1,0 +1,20 @@
+.ia-component-abierta {
+    background-color: #fff;
+    padding: 20px;
+    margin-bottom: 25px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+.ia-component-abierta .enunciado {
+    font-weight: bold;
+    color: #444;
+}
+.ia-component-abierta textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-top: 10px;
+    font-family: inherit;
+    box-sizing: border-box;
+}

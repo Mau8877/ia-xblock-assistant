@@ -1,0 +1,23 @@
+.ia-component-teoria {
+    background-color: #fdfdfd;
+    padding: 25px;
+    margin-bottom: 25px;
+    border-left: 5px solid #0056D2; /* La línea azul corporativa a la izquierda */
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    font-size: 16px;
+    line-height: 1.6;
+    color: #333;
+}
+.ia-component-teoria h2, .ia-component-teoria h3 {
+    margin-top: 0;
+    color: #1a1a1a;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+}
+.ia-component-teoria p {
+    margin-bottom: 15px;
+}
+.ia-component-teoria ul {
+    margin-bottom: 15px;
+}

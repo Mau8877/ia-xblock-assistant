@@ -1,0 +1,40 @@
+.ia-assistant-studio {
+    padding: 20px; 
+    font-family: Arial, sans-serif; 
+    border: 1px solid #ddd; 
+    border-radius: 8px;
+    background-color: #ffffff;
+}
+.ia-assistant-studio h2 {
+    color: #0056D2; 
+    margin-top: 0;
+}
+.ia-assistant-studio textarea {
+    width: 100%; 
+    padding: 10px; 
+    border-radius: 5px; 
+    font-size: 14px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+.ia-assistant-studio .actions {
+    margin-top: 15px;
+}
+.ia-assistant-studio #btn-generar {
+    background-color: #0056D2; 
+    color: white; 
+    padding: 10px 20px; 
+    border: none; 
+    border-radius: 5px; 
+    cursor: pointer; 
+    font-weight: bold;
+}
+.ia-assistant-studio #btn-generar:hover {
+    background-color: #003e99;
+}
+.ia-assistant-studio #mensaje-estado {
+    color: green; 
+    display: none; 
+    margin-top: 10px;
+    font-weight: bold;
+}

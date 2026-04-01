@@ -5,3 +5,4 @@ xblock-sdk/var/
 xblock-sdk/db.sqlite3
 .DS_Store
 *.log
+.env

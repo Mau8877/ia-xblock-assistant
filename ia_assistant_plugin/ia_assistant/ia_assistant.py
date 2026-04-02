@@ -1,20 +1,15 @@
-import os
-import json
 import logging
-from dotenv import load_dotenv
-from openai import OpenAI
-
 from xblock.core import XBlock
 from xblock.fields import Scope, String
 from xblock.fragment import Fragment
 
-# Importaciones locales
+# --- Importaciones de Capas Refactorizadas ---
 from .utils.load_resource import load_resource
-from .prompt_builder import generar_system_prompt 
 from .component_manager import renderizar_unidad
-from .evaluator import calcular_nota_final
+from .ia_docente.ia_docente_client import generar_contenido_unidad
+from .ia_alumno.evaluator.calcular_nota import calcular_nota_final
 
-# Configuración de logs para ver en la consola de Django
+# Configuración de logs para el workbench de Django
 logger = logging.getLogger(__name__)
 
 class IAAssistantXBlock(XBlock):
@@ -38,10 +33,12 @@ class IAAssistantXBlock(XBlock):
         help="JSON estructurado de la unidad."
     )
 
+    # -----------------------------------------------------------------------
+    # VISTA STUDIO (Configuración del Docente)
+    # -----------------------------------------------------------------------
     def studio_view(self, context=None):
-        """ Vista de configuración para el docente. """
+        """ Renderiza la interfaz donde el profesor escribe el prompt. """
         html_str = load_resource("static/core/studio/studio.html")
-        # Aseguramos que el prompt actual se cargue en el textarea
         html_formateado = html_str.format(prompt_docente=self.prompt_docente)
         
         frag = Fragment(html_formateado)
@@ -52,94 +49,80 @@ class IAAssistantXBlock(XBlock):
 
     @XBlock.json_handler
     def guardar_prompt(self, data, suffix=''):
-        """ Llama a Qwen y guarda el resultado en unidad_json. """
+        """ 
+        Handler Ajax que delega la generación a ia_docente_client. 
+        """
         nuevo_prompt = data.get('prompt', '')
         self.prompt_docente = nuevo_prompt 
 
-        # 1. Cargar API Key
-        load_dotenv()
-        api_key = os.getenv("OPENROUTER_API_KEY")
+        logger.info(f"IA Assistant: Iniciando generación para docente...")
         
-        if not api_key:
-            logger.error("IA Assistant: No se encontró OPENROUTER_API_KEY en .env")
-            return {"resultado": "error", "mensaje": "Falta la API Key en el servidor."}
+        # Delegación a la lógica de negocio en ia_docente
+        resultado = generar_contenido_unidad(nuevo_prompt)
 
-        # 2. Configurar Cliente
-        client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=api_key,
-        )
+        if resultado['resultado'] == 'ok':
+            self.unidad_json = resultado['json_unidad']
+            logger.info("IA Assistant: Unidad generada y persistida exitosamente.")
+            return {"resultado": "ok", "mensaje": "Unidad generada correctamente."}
+        else:
+            # El error ya viene formateado con el mensaje de ia_docente_client
+            return resultado
 
-        system_prompt = generar_system_prompt()
-
-        try:
-            logger.info(f"IA Assistant: Llamando a Qwen con prompt: {nuevo_prompt[:50]}...")
-            
-            completion = client.chat.completions.create(
-                model="qwen/qwen3.6-plus-preview:free",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": nuevo_prompt}
-                ]
-            )
-
-            respuesta_ia = completion.choices[0].message.content
-            
-            # Limpieza básica por si la IA ignora las instrucciones y pone markdown
-            respuesta_ia = respuesta_ia.replace("```json", "").replace("```", "").strip()
-            
-            # Intentar parsear para validar que es JSON real antes de guardar
-            json.loads(respuesta_ia)
-            
-            self.unidad_json = respuesta_ia
-            logger.info("IA Assistant: Unidad guardada exitosamente en la BD.")
-            
-            return {"resultado": "ok", "mensaje": "Unidad generada y guardada correctamente."}
-
-        except json.JSONDecodeError:
-            logger.error(f"IA Assistant: La IA devolvió un JSON inválido: {respuesta_ia[:100]}")
-            return {"resultado": "error", "mensaje": "La IA devolvió un formato inválido. Intenta de nuevo."}
-        except Exception as e:
-            logger.error(f"IA Assistant Error: {str(e)}")
-            return {"resultado": "error", "mensaje": f"Error de conexión: {str(e)}"}
-
+    # -----------------------------------------------------------------------
+    # VISTA STUDENT (Interfaz del Alumno)
+    # -----------------------------------------------------------------------
     def student_view(self, context=None):
-        """ Ensambla y muestra la unidad al estudiante. """
-        # --- TRUCO DE DEBUG ---
+        """ Ensambla dinámicamente los componentes de la unidad. """
+
         #return self.studio_view(context)
-
         json_crudo = self.unidad_json if self.unidad_json else "{}"
-        prompt_debug = self.prompt_docente if self.prompt_docente else "Sin prompt."
-
+        
+        # El component_manager se encarga de convertir JSON -> HTML y listar recursos
         html_componentes, recursos = renderizar_unidad(json_crudo)
 
         html_base = load_resource("static/core/student/student.html").format(
-            unidad_titulo=recursos['titulo'],
+            unidad_titulo=recursos.get('titulo', 'Unidad de Aprendizaje'),
             componentes_html=html_componentes,
             unidad_json=json_crudo,
-            prompt_debug=prompt_debug
+            prompt_debug=self.prompt_docente
         )
         
         frag = Fragment(html_base)
         
-        # Inyectar recursos CSS/JS de componentes
-        for css in recursos['css']: frag.add_css(load_resource(css))
-        for js in recursos['js']: frag.add_javascript(load_resource(js))
+        # Inyectar dinámicamente CSS/JS de los componentes usados (Teoría, Código, etc.)
+        for css in recursos.get('css', []): frag.add_css(load_resource(css))
+        for js in recursos.get('js', []): frag.add_javascript(load_resource(js))
         
-        # Estilos y JS del Chasis
+        # Recursos base del "Chasis" del estudiante
         frag.add_css(load_resource("static/core/student/student.css"))
         frag.add_javascript(load_resource("static/core/student/student.js"))
         frag.initialize_js('StudentMasterInit')
         
         return frag
 
+    # -----------------------------------------------------------------------
+    # HANDLER DE CALIFICACIÓN
+    # -----------------------------------------------------------------------
     @XBlock.json_handler
     def calificar_unidad(self, data, suffix=''):
-        """ Maneja la calificación. """
+        """ 
+        Recibe las respuestas y delega la evaluación a ia_alumno.evaluator.
+        """
+        logger.info("IA Assistant: Procesando entrega del alumno...")
+        
         resultado = calcular_nota_final(data, self.unidad_json)
-        self.runtime.publish(self, 'grade', {'value': resultado['nota']/100.0, 'max_value': 1.0})
+        
+        # Publicar la nota en el runtime de Open edX (Grades)
+        # Nota: nota viene en escala 0-100, edX espera 0.0-1.0
+        nota_final = resultado.get('nota', 0)
+        self.runtime.publish(self, 'grade', {
+            'value': nota_final / 100.0, 
+            'max_value': 1.0
+        })
+        
         return resultado
 
     @staticmethod
     def workbench_scenarios():
+        """ Escenario para el SDK de XBlock. """
         return [("IA Assistant XBlock", "<ia_assistant/>")]

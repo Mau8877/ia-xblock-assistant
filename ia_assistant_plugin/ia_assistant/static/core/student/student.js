@@ -7,32 +7,44 @@ function StudentMasterInit(runtime, element) {
         
         $btn.text('Enviando a la plataforma... ⏳').prop('disabled', true);
 
-        // 1. Recolectamos respuestas (Por ahora del componente Quiz)
+        // --- 1. RECOLECCIÓN DE DATOS ---
         var resultadosQuiz = {};
         if (window.IA_Components && window.IA_Components.evaluarQuiz) {
             resultadosQuiz = window.IA_Components.evaluarQuiz(element);
         }
 
-        // 2. Enviamos al servidor de Open edX (Python)
+        // AGREGAMOS ESTA PARTE QUE FALTABA:
+        var respuestasAbiertas = [];
+        if (window.IA_Components && window.IA_Components.obtenerRespuestasAbiertas) {
+            respuestasAbiertas = window.IA_Components.obtenerRespuestasAbiertas(element);
+        }
+
+        var respuestasCodigo = [];
+        if (window.IA_Components && window.IA_Components.obtenerRespuestasCodigo) {
+            respuestasCodigo = window.IA_Components.obtenerRespuestasCodigo(element);
+        }
+
+        // --- 2. ENVÍO AJAX ---
         $.ajax({
             type: "POST",
             url: handlerUrl,
             data: JSON.stringify({
                 "respuestas_quiz": resultadosQuiz,
-                "respuestas_abiertas": respuestasAbiertas
+                "respuestas_abiertas": respuestasAbiertas,
+                "respuestas_codigo": respuestasCodigo
             }),
+            // Agregamos contentType para ser más precisos con Django
+            contentType: "application/json", 
             success: function(data) {
                 $btn.text('Evaluación Enviada').prop('disabled', true);
                 
                 if(data.resultado === 'ok') {
-                    // Construimos el HTML del feedback
                     var feedbackHTML = '<ul>';
                     data.feedback.forEach(function(item) {
                         feedbackHTML += `<li>${item}</li>`;
                     });
                     feedbackHTML += '</ul>';
 
-                    // Pintamos el cuadro de éxito con la nota real
                     $('#master-feedback', element).html(`
                         <div style="padding:20px; background:#e3f2fd; border: 2px solid #0056d2; border-radius:10px; margin-top:20px;">
                             <h3 style="margin-top:0; color:#0056d2;">📊 Resultado de la Evaluación</h3>

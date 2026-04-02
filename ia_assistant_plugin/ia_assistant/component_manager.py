@@ -14,14 +14,17 @@ def renderizar_unidad(json_str):
         return f"<p>Error al parsear unidad: {str(e)}</p>", {"titulo": "Error", "css": set(), "js": set()}
 
     html_final = ""
+    # Inicializamos como SETS para evitar que se cargue el mismo CSS 5 veces 
+    # si hay 5 componentes del mismo tipo.
     recursos = {
         "titulo": datos.get("titulo_unidad", "Unidad Interactiva"),
         "css": set(),
         "js": set()
     }
 
-    # Aquí adentro es donde se maneja el índice (idx)
-    for idx, comp in enumerate(datos.get("componentes", [])):
+    componentes = datos.get("componentes", [])
+
+    for idx, comp in enumerate(componentes):
         tipo = comp.get("tipo")
         
         if tipo == "teoria":
@@ -51,5 +54,22 @@ def renderizar_unidad(json_str):
             )
             recursos["css"].add("static/components/pregunta_abierta/pregunta_abierta.css")
             recursos["js"].add("static/components/pregunta_abierta/pregunta_abierta.js")
+
+        elif tipo == "codigo":
+            specs = comp.get('especificaciones', {})
+            
+            codigo_limpio = comp.get('codigo_inicial', '').replace('\\n', '\n')
+
+            html_comp = load_resource("static/components/codigo/codigo.html").format(
+                id=comp.get('id', f'cod_{idx}'),
+                enunciado=comp.get('enunciado', ''),
+                lenguaje=comp.get('lenguaje', 'PYTHON').upper(),
+                codigo_inicial=codigo_limpio,
+                entrada=specs.get('entrada_esperada', 'N/A'),
+                salida=specs.get('salida_esperada', 'N/A')
+            )
+            html_final += html_comp
+            recursos["css"].add("static/components/codigo/codigo.css")
+            recursos["js"].add("static/components/codigo/codigo.js")
 
     return html_final, recursos

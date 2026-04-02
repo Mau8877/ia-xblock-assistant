@@ -2,9 +2,10 @@ BASE_INSTRUCTIONS = """Eres un Catedrático universitario experto armando materi
 El usuario (docente) te dará una instrucción. Debes analizar qué tipo de contenido está pidiendo y armar una estructura JSON utilizando SOLO los componentes que correspondan a su petición.
 
 REGLAS DE COMPONENTES:
-- Si el docente pide explicar un tema o mostrar código, usa el componente "teoria". (El HTML de teoría soporta etiquetas <pre><code> para el código).
-- Si el docente pide preguntas de opción múltiple, usa el componente "quiz_multiple".
-- Si el docente pide preguntas de desarrollo, usa el componente "pregunta_abierta".
+- Usa "teoria" para explicaciones conceptuales, texto y ejemplos de lectura.
+- Usa "quiz_multiple" para evaluar conocimiento rápido con opciones.
+- Usa "pregunta_abierta" para reflexiones teóricas que requieran redacción.
+- Usa "codigo" EXCLUSIVAMENTE cuando el docente pida ejercicios prácticos donde el alumno deba ESCRIBIR código (SQL, Python, JS, etc.). No lo confundas con mostrar código de ejemplo (eso va en teoría).
 - NO incluyas componentes que el docente no haya sugerido directa o indirectamente."""
 
 COMPONENTES_SCHEMA = {
@@ -30,16 +31,34 @@ COMPONENTES_SCHEMA = {
             {
               "tipo": "pregunta_abierta",
               "id": "abierta_1",
-              "enunciado": "Escribe una pregunta de desarrollo aquí."
-            }"""
+              "enunciado": "Escribe una pregunta de desarrollo aquí.",
+              "puntos_clave": "Conceptos que esperas que el alumno mencione"
+            }""",
+
+    # NUEVO COMPONENTE: Laboratorio de Código
+    "codigo": """
+        {
+          "tipo": "codigo",
+          "id": "cod_1",
+          "enunciado": "Enunciado detallado (ej: 'Crea una función en Python que reciba una lista de enteros...')",
+          "lenguaje": "python", 
+          "codigo_inicial": "# Escribe tu solución aquí\\n",
+          "especificaciones": {
+              "entrada_esperada": "Una lista de números [1, 2, 3]",
+              "salida_esperada": "El promedio de los números",
+              "restricciones": "No usar librerías externas"
+          },
+          "puntos_clave": "Uso de bucles, manejo de división por cero, retorno de float"
+        }"""
 }
 
 def generar_system_prompt(modulos_disponibles=None):
     """
-    Le pasa a la IA el catálogo de componentes para que ella decida cuáles usar.
+    Le pasa a la IA el catálogo de componentes actualizado.
     """
     if modulos_disponibles is None:
-        modulos_disponibles = ["teoria", "quiz_multiple", "pregunta_abierta"]
+        # Añadimos "codigo" a la lista por defecto
+        modulos_disponibles = ["teoria", "quiz_multiple", "pregunta_abierta", "codigo"]
         
     esquemas_seleccionados = [COMPONENTES_SCHEMA[mod] for mod in modulos_disponibles if mod in COMPONENTES_SCHEMA]
     esquemas_unidos = ",\n".join(esquemas_seleccionados)

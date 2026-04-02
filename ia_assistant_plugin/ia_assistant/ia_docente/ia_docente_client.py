@@ -2,6 +2,7 @@ import os
 import json
 import time
 import logging
+import re  
 from openai import OpenAI
 from dotenv import load_dotenv
 from .prompt_docente_builder import generar_system_prompt
@@ -9,7 +10,7 @@ from .prompt_docente_builder import generar_system_prompt
 logger = logging.getLogger(__name__)
 load_dotenv()
 
-# Lista de modelos gratuitos en orden de prioridad
+# Lista de modelos IA
 MODELOS_FALLBACK = [
     "qwen/qwen3.6-plus-preview:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
@@ -37,10 +38,20 @@ def generar_contenido_unidad(prompt_usuario):
                     {"role": "user", "content": prompt_usuario}
                 ],
                 response_format={ "type": "json_object" },
-                timeout=30 # Evitamos que un modelo lento trabe todo
+                timeout=30 
             )
 
-            respuesta_ia = completion.choices[0].message.content
+            respuesta_raw = completion.choices[0].message.content
+            
+            match = re.search(r'\{.*\}', respuesta_raw, re.DOTALL)
+            
+            if match:
+                respuesta_ia = match.group(0)
+            else:
+                # Si no hay llaves, algo salió muy mal con el modelo
+                logger.warning(f"Modelo {modelo} no devolvió un JSON válido. Reintentando...")
+                continue
+
             # Validar JSON antes de darlo por bueno
             json.loads(respuesta_ia)
             
@@ -52,12 +63,10 @@ def generar_contenido_unidad(prompt_usuario):
 
         except Exception as e:
             error_msg = str(e)
-            # Si es un error de Rate Limit (429) o de sobrecarga del proveedor (503/500)
             if "429" in error_msg or "provider" in error_msg.lower():
                 logger.warning(f"Modelo {modelo} saturado/fallido. Saltando al siguiente...")
-                continue # Salta al siguiente modelo en MODELOS_FALLBACK
+                continue 
             else:
-                # Si es un error de otro tipo (ej: API Key inválida), mejor parar
                 logger.error(f"Error crítico con {modelo}: {error_msg}")
                 break 
 

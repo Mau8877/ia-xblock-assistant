@@ -1,32 +1,48 @@
-<div class="ia-master-container">
+<div class="ia-master-container" data-unidad-id="{unidad_id}">
     <div class="ia-header">
-        <h2>{unidad_titulo}</h2>
+        <div class="header-main">
+            <span class="ia-badge">Afrodita IA v0.2.0</span>
+            <h2>{unidad_titulo}</h2>
+        </div>
+        </div>
+
+    <nav class="ia-tabs-nav">
+        <button class="tab-btn active" data-target="tab-teoria">📖 Teoría</button>
+        <button class="tab-btn" data-target="tab-quiz">📝 Quizzes</button>
+        <button class="tab-btn" data-target="tab-abierta">✍️ Abiertas</button>
+        <button class="tab-btn" data-target="tab-codigo">💻 Código</button>
+        <button class="tab-btn" data-target="tab-revision">🚀 Revisión</button>
+    </nav>
+
+    <div class="ia-content-wrapper">
+        <div id="ia-components-wrapper" style="display: none;">{componentes_html}</div>
+
+        <div id="tab-teoria" class="tab-content active-content">
+            <div class="empty-state">No hay contenido de teoría.</div>
+        </div>
+        <div id="tab-quiz" class="tab-content"><div class="empty-state">No hay quizzes.</div></div>
+        <div id="tab-abierta" class="tab-content"><div class="empty-state">No hay preguntas abiertas.</div></div>
+        <div id="tab-codigo" class="tab-content"><div class="empty-state">No hay retos de código.</div></div>
+
+        <div id="tab-revision" class="tab-content">
+            <h3>Resumen de tu Evaluación</h3>
+            <p>Revisa tus respuestas antes de enviar.</p>
+            <hr class="ia-divider">
+            <div id="revision-summary"></div>
+            
+            <div class="ia-master-actions">
+                <button id="btn-enviar-master" class="btn-primary">Enviar Evaluación Completa</button>
+            </div>
+            <div id="master-feedback" class="ia-feedback-area" style="display: none; margin-top: 20px;"></div>
+        </div>
     </div>
 
-    <div style="background: #fff3cd; padding: 15px; border: 1px solid #ffeeba; margin-bottom: 20px; font-family: monospace; font-size: 12px; overflow-x: auto;">
-        <details>
-            <summary><b>🛠️ Panel de Control Debug (Haz clic para ver)</b></summary>
-            <p><b>Prompt enviado por el docente:</b></p>
-            <pre style="background: #eee; padding: 5px;">{prompt_debug}</pre>
-            <hr>
-            <p><b>JSON guardado en la BD:</b></p>
-            <pre style="background: #eee; padding: 5px;">{unidad_json}</pre>
-        </details>
+    <div class="ia-footer">
+        <div class="timer-box">⏱️ Tiempo: <span id="ia-timer">00:00</span></div>
+        <div id="save-status">✓ Autoguardado activo</div>
     </div>
 
-    <div id="ia-components-wrapper">
-        {componentes_html}
-    </div>
+    <div id="ia-sidekick" class="ia-sidekick-circle"><span>🤖</span></div>
 
-    </div>
-    <hr style="margin-top: 30px; border-top: 2px dashed #ccc;">
-
-    <div class="ia-master-actions">
-        <button id="btn-enviar-master" class="btn-primary">Enviar Evaluación Completa</button>
-        <div id="master-feedback" style="display: none; margin-top: 15px;"></div>
-    </div>
-    
-    <script type="application/json" id="master-json-debug">
-        {unidad_json}
-    </script>
+    <script type="application/json" id="master-json-data">{unidad_json}</script>
 </div>

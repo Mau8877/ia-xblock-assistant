@@ -2,59 +2,62 @@ import json
 import os
 import time
 import logging
+import re
 from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-# Mantenemos la lista para failover
+# Mantenemos la lista para failover - Priorizando estabilidad
 MODELOS_FALLBACK = [
     "qwen/qwen3.6-plus-preview:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "qwen/qwen3.6-plus:free"
+    "google/gemini-2.0-flash-lite-preview-02-05:free"
 ]
 
 def evaluar_respuestas_batch(lista_tareas):
     """
-    Envía todas las respuestas en un solo prompt con lógica de conmutación por error.
+    Evalúa un lote de tareas con máxima resiliencia.
     """
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
-        logger.error("Evaluador: API Key no encontrada.")
+        logger.error("Evaluador: API Key no encontrada en el entorno.")
         return None
 
     client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
 
-    # 1. Construcción del Cuerpo del Mensaje
+    # 1. Construcción del Prompt de Usuario
     prompt_tareas = ""
     for idx, tarea in enumerate(lista_tareas):
         tipo = tarea.get('tipo', 'abierta').upper()
         lang = f"({tarea.get('lenguaje', '')})" if tipo == 'CODIGO' else ""
-        prompt_tareas += f"\n--- Tarea {idx} [{tipo} {lang}] ---\n"
+        prompt_tareas += f"\n--- Tarea ID: {tarea.get('id')} [{tipo} {lang}] ---\n"
         prompt_tareas += f"Enunciado: {tarea['enunciado']}\n"
-        prompt_tareas += f"Puntos Clave: {tarea.get('puntos_clave', 'N/A')}\n"
-        prompt_tareas += f"Respuesta Alumno: {tarea['respuesta']}\n"
+        prompt_tareas += f"Criterios/Puntos Clave: {tarea.get('puntos_clave', 'N/A')}\n"
+        prompt_tareas += f"Respuesta del Estudiante: {tarea['respuesta']}\n"
 
     system_prompt = """
-    Actúa como un Ingeniero de Software Senior y Arquitecto. Califica de 0 a 100.
+    Actúa como un Evaluador Académico Senior de Ingeniería de Sistemas. 
+    Tu objetivo es calificar respuestas de estudiantes del 0 al 100.
     
-    PARA CÓDIGO (Python, SQL, Delphi, C++, etc.):
-    - Valora SINTAXIS y si la LÓGICA resuelve el enunciado.
-    - Evalúa BUENAS PRÁCTICAS (indentación, nombres).
-    - Sé estricto con Begin/End en Delphi/Pascal y con indentación en Python.
+    INSTRUCCIONES:
+    1. Sé justo pero riguroso con la sintaxis en componentes de CÓDIGO.
+    2. En PREGUNTAS ABIERTAS, busca la presencia de los 'Puntos Clave'.
+    3. Tu respuesta debe ser exclusivamente un objeto JSON.
+    4. USA LOS MISMOS 'id' que se te proporcionan en cada tarea.
 
-    PARA PREGUNTAS ABIERTAS:
-    - Valora semántica y puntos clave.
-
-    Responde ESTRICTAMENTE un JSON: 
-    {"evaluaciones": [{"id": "id_del_componente", "nota": 80, "feedback": "..."}]}
+    FORMATO DE RESPUESTA:
+    {
+      "evaluaciones": [
+        {"id": "id_recibido", "nota": 0-100, "feedback": "Breve explicación técnica"}
+      ]
+    }
     """
 
     # 2. Bucle de Failover entre modelos
     for modelo in MODELOS_FALLBACK:
-        # Intentaremos 2 veces por cada modelo antes de saltar al siguiente (por si es un glitch temporal)
         for intento in range(2):
             try:
                 logger.info(f"Evaluando con {modelo} (Intento {intento+1})...")
@@ -66,22 +69,39 @@ def evaluar_respuestas_batch(lista_tareas):
                         {"role": "user", "content": prompt_tareas}
                     ],
                     response_format={ "type": "json_object" },
-                    timeout=45 # Más tiempo para el alumno, la evaluación es pesada
+                    timeout=50 # Un poco más de tiempo para evaluaciones complejas
                 )
                 
-                contenido = res.choices[0].message.content
-                return json.loads(contenido)
+                respuesta_raw = res.choices[0].message.content
+
+                # --- LIMPIEZA Y VALIDACIÓN ---
+                match = re.search(r'\{.*\}', respuesta_raw, re.DOTALL)
+                
+                if match:
+                    respuesta_ia = match.group(0)
+                    try:
+                        data_eval = json.loads(respuesta_ia)
+                        # Verificamos que tenga la estructura mínima requerida
+                        if "evaluaciones" in data_eval:
+                            logger.info(f"Evaluación exitosa con {modelo}")
+                            return data_eval
+                    except json.JSONDecodeError:
+                        logger.warning(f"JSON incompleto de {modelo}. Intentando de nuevo...")
+                        continue
+                else:
+                    logger.warning(f"No se detectó estructura JSON en la respuesta de {modelo}.")
+                    continue
 
             except Exception as e:
                 error_str = str(e)
-                # Si es Rate Limit (429), esperamos un poco y reintentamos o saltamos
-                if "429" in error_str:
-                    logger.warning(f"Rate limit en {modelo}. Esperando...")
+                # Manejo de errores de red o cuotas
+                if any(err in error_str for err in ["429", "provider", "timeout"]):
+                    logger.warning(f"Fallo temporal en {modelo}: {error_str}. Reintentando...")
                     time.sleep(2)
                     continue 
                 
-                logger.error(f"Fallo con modelo {modelo}: {error_str}")
-                break # Salta al siguiente modelo de la lista MODELOS_FALLBACK
+                logger.error(f"Fallo crítico en {modelo}: {error_str}")
+                break # Pasar al siguiente modelo de la lista
 
-    logger.critical("Todos los modelos de evaluación fallaron.")
+    logger.critical("Error: Todos los modelos del Fallback fallaron.")
     return None

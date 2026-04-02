@@ -65,7 +65,6 @@ class IAAssistantXBlock(XBlock):
             logger.info("IA Assistant: Unidad generada y persistida exitosamente.")
             return {"resultado": "ok", "mensaje": "Unidad generada correctamente."}
         else:
-            # El error ya viene formateado con el mensaje de ia_docente_client
             return resultado
 
     # -----------------------------------------------------------------------
@@ -73,14 +72,15 @@ class IAAssistantXBlock(XBlock):
     # -----------------------------------------------------------------------
     def student_view(self, context=None):
         """ Ensambla dinámicamente los componentes de la unidad. """
-
         #return self.studio_view(context)
+        
         json_crudo = self.unidad_json if self.unidad_json else "{}"
         
         # El component_manager se encarga de convertir JSON -> HTML y listar recursos
         html_componentes, recursos = renderizar_unidad(json_crudo)
 
         html_base = load_resource("static/core/student/student.html").format(
+            unidad_id=str(self.scope_ids.usage_id),
             unidad_titulo=recursos.get('titulo', 'Unidad de Aprendizaje'),
             componentes_html=html_componentes,
             unidad_json=json_crudo,
@@ -89,7 +89,7 @@ class IAAssistantXBlock(XBlock):
         
         frag = Fragment(html_base)
         
-        # Inyectar dinámicamente CSS/JS de los componentes usados (Teoría, Código, etc.)
+        # Inyectar dinámicamente CSS/JS de los componentes usados
         for css in recursos.get('css', []): frag.add_css(load_resource(css))
         for js in recursos.get('js', []): frag.add_javascript(load_resource(js))
         
@@ -98,6 +98,8 @@ class IAAssistantXBlock(XBlock):
         frag.add_javascript(load_resource("static/core/student/student.js"))
         frag.initialize_js('StudentMasterInit')
         
+        print(f"DEBUG: El JSON en la base de datos es: {self.unidad_json}")
+
         return frag
 
     # -----------------------------------------------------------------------
@@ -106,19 +108,26 @@ class IAAssistantXBlock(XBlock):
     @XBlock.json_handler
     def calificar_unidad(self, data, suffix=''):
         """ 
-        Recibe las respuestas y delega la evaluación a ia_alumno.evaluator.
+        Recibe las respuestas y delega la evaluación. 
+        Solo publica la nota si el proceso fue exitoso.
         """
         logger.info("IA Assistant: Procesando entrega del alumno...")
         
         resultado = calcular_nota_final(data, self.unidad_json)
         
-        # Publicar la nota en el runtime de Open edX (Grades)
-        # Nota: nota viene en escala 0-100, edX espera 0.0-1.0
-        nota_final = resultado.get('nota', 0)
-        self.runtime.publish(self, 'grade', {
-            'value': nota_final / 100.0, 
-            'max_value': 1.0
-        })
+        # --- BLINDAJE DE LÓGICA ---
+        # Solo publicamos la nota si la IA y el evaluador respondieron 'ok'
+        if resultado.get('resultado') == 'ok':
+            nota_final = resultado.get('nota', 0)
+            
+            # Publicar nota en Open edX (escala 0.0 a 1.0)
+            self.runtime.publish(self, 'grade', {
+                'value': nota_final / 100.0, 
+                'max_value': 1.0
+            })
+            logger.info(f"IA Assistant: Nota de {nota_final} publicada para el alumno.")
+        else:
+            logger.error(f"IA Assistant: Fallo en calificación. Mensaje: {resultado.get('mensaje')}")
         
         return resultado
 

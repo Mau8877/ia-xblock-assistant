@@ -1,32 +1,50 @@
+:root {
+    --primary-uagrm: #0056d2;
+    --dark-bg: #1e1e1e;
+    --text-main: #333;
+    --border-color: #e0e0e0;
+}
+
 .ia-master-container {
-    padding: 30px;
-    background-color: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    background: #f9f9f9;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
 }
-.ia-header h2 {
-    color: #0056D2;
-    border-bottom: 3px solid #0056D2;
-    padding-bottom: 10px;
-    margin-top: 0;
+
+/* Header & Progress */
+.ia-header { padding: 20px; background: white; border-bottom: 1px solid var(--border-color); }
+.progress-container { height: 8px; background: #eee; border-radius: 4px; margin-top: 10px; position: relative; }
+.progress-bar { height: 100%; background: var(--primary-uagrm); border-radius: 4px; transition: width 0.5s ease; }
+
+/* Tabs */
+.ia-tabs-nav { display: flex; background: #f1f1f1; border-bottom: 1px solid var(--border-color); }
+.tab-btn { 
+    flex: 1; padding: 15px; border: none; background: none; cursor: pointer;
+    font-weight: bold; color: #666; transition: 0.3s;
 }
-.ia-master-actions {
-    text-align: center;
-    margin-top: 20px;
+.tab-btn.active { background: white; color: var(--primary-uagrm); border-bottom: 3px solid var(--primary-uagrm); }
+
+/* Content Area */
+.tab-content { display: none; padding: 20px; min-height: 300px; }
+.active-content { display: block; animation: fadeIn 0.3s; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Sidekick Flotante */
+.ia-sidekick-circle {
+    position: absolute; bottom: 60px; right: 20px;
+    width: 50px; height: 50px; background: var(--primary-uagrm);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    z-index: 1000; transition: transform 0.2s;
 }
-.btn-primary {
-    background-color: #0056D2;
-    color: white;
-    padding: 12px 30px;
-    border: none;
-    border-radius: 5px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-.btn-primary:hover {
-    background-color: #0043a4;
+.ia-sidekick-circle:hover { transform: scale(1.1); }
+
+/* Footer */
+.ia-footer { 
+    padding: 10px 20px; background: #eee; font-size: 13px; 
+    display: flex; justify-content: space-between; color: #666;
 }

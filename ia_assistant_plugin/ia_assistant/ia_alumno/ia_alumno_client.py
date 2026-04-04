@@ -41,7 +41,7 @@ def evaluar_respuestas_batch(lista_tareas):
         prompt_tareas += "-----------------------------------\n"
 
     # 2. System Prompt: Define la personalidad y el rigor del calificador
-    system_prompt = """Eres el Sistema de Evaluación 'Afrodita' de la UAGRM. 
+    system_prompt = """Eres el Sistema de Evaluación de la Universidad Autónoma Gabriel René Moreno (UAGRM). 
         Tu tarea es calificar tareas de Ingeniería de Sistemas con objetividad técnica.
 
         REGLAS DE EVALUACIÓN:
@@ -65,7 +65,7 @@ def evaluar_respuestas_batch(lista_tareas):
     for modelo in MODELOS_FALLBACK:
         for intento in range(2):
             try:
-                logger.info(f"Afrodita: Evaluando con {modelo} (Intento {intento+1})...")
+                logger.info(f"Evaluando con {modelo} (Intento {intento+1})...")
                 
                 res = client.chat.completions.create(
                     model=modelo,
@@ -84,7 +84,7 @@ def evaluar_respuestas_batch(lista_tareas):
                 if match:
                     data_eval = json.loads(match.group(0))
                     if "evaluaciones" in data_eval:
-                        logger.info(f"Afrodita: Éxito con {modelo}")
+                        logger.info(f"Éxito con {modelo}")
                         return data_eval
                 
             except Exception as e:
@@ -92,5 +92,5 @@ def evaluar_respuestas_batch(lista_tareas):
                 time.sleep(1)
                 continue # Reintenta o pasa al siguiente modelo
 
-    logger.critical("Afrodita: Todos los modelos fallaron.")
+    logger.critical("Todos los modelos fallaron.")
     return None

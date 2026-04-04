@@ -1,17 +1,16 @@
 <div class="ia-master-container" data-unidad-id="{unidad_id}">
     <div class="ia-header">
         <div class="header-main">
-            <span class="ia-badge">Afrodita IA v0.2.0</span>
             <h2>{unidad_titulo}</h2>
         </div>
     </div>
 
     <nav class="ia-tabs-nav">
-        <button class="tab-btn active" data-target="tab-teoria">📖 Teoría</button>
-        <button class="tab-btn" data-target="tab-quiz">📝 Quizzes</button>
-        <button class="tab-btn" data-target="tab-abierta">✍️ Abiertas</button>
-        <button class="tab-btn" data-target="tab-codigo">💻 Código</button>
-        <button class="tab-btn" data-target="tab-revision">🚀 Revisión</button>
+        <button class="tab-btn active" data-target="tab-teoria">Teoría</button>
+        <button class="tab-btn" data-target="tab-quiz">Quizzes</button>
+        <button class="tab-btn" data-target="tab-abierta">Preguntas</button>
+        <button class="tab-btn" data-target="tab-codigo">Código</button>
+        <button class="tab-btn" data-target="tab-revision">Revisión</button>
     </nav>
 
     <div class="ia-content-wrapper">
@@ -57,5 +56,7 @@
 
     <div id="ia-sidekick" class="ia-sidekick-circle"><span>🤖</span></div>
 
+    <script type="application/json" id="saved-answers-data">{respuestas_guardadas}</script>
     <script type="application/json" id="master-json-data">{unidad_json}</script>
+    <script type="text/plain" id="ia-intentos-data">{intentos_agotados}</script>
 </div>

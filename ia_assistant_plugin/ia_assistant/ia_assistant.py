@@ -1,6 +1,7 @@
+import json
 import logging
 from xblock.core import XBlock
-from xblock.fields import Scope, String
+from xblock.fields import Scope, String, Dict, Integer
 from xblock.fragment import Fragment
 
 # --- Importaciones de Capas Refactorizadas ---
@@ -13,7 +14,9 @@ from .ia_alumno.evaluator.calcular_nota import calcular_nota_final
 logger = logging.getLogger(__name__)
 
 class IAAssistantXBlock(XBlock):
-    
+    has_score = True
+    icon_class = 'problem'
+
     display_name = String(
         display_name="Nombre a mostrar",
         default="Asistente IA UAGRM",
@@ -31,6 +34,27 @@ class IAAssistantXBlock(XBlock):
         default="",
         scope=Scope.content,
         help="JSON estructurado de la unidad."
+    )
+
+    # -----------------------------------------------------------------------
+    # MEMORIA DEL ESTUDIANTE (AUTOGUARDADO)
+    # -----------------------------------------------------------------------
+    respuestas_alumno = Dict(
+        default={},
+        scope=Scope.user_state,
+        help="Memoria del estudiante con sus respuestas borrador."
+    )
+
+    intentos_realizados = Integer(
+        default=0,
+        scope=Scope.user_state,
+        help="Número de veces que el alumno ha enviado la evaluación."
+    )
+
+    feedback_guardado = Dict(
+        default={},
+        scope=Scope.user_state,
+        help="Guarda el feedback detallado de la IA para mostrarlo permanentemente."
     )
 
     # -----------------------------------------------------------------------
@@ -72,19 +96,24 @@ class IAAssistantXBlock(XBlock):
     # -----------------------------------------------------------------------
     def student_view(self, context=None):
         """ Ensambla dinámicamente los componentes de la unidad. """
-        #return self.studio_view(context)
         
+        #return self.studio_view(context)
+
         json_crudo = self.unidad_json if self.unidad_json else "{}"
         
         # El component_manager se encarga de convertir JSON -> HTML y listar recursos
         html_componentes, recursos = renderizar_unidad(json_crudo)
 
+        intentos_agotados = "true" if self.intentos_realizados >= 1 else "false"
         html_base = load_resource("static/core/student/student.html").format(
             unidad_id=str(self.scope_ids.usage_id),
             unidad_titulo=recursos.get('titulo', 'Unidad de Aprendizaje'),
             componentes_html=html_componentes,
             unidad_json=json_crudo,
-            prompt_debug=self.prompt_docente
+            prompt_debug=self.prompt_docente,
+            feedback_historial=json.dumps(self.feedback_guardado) if self.feedback_guardado else "{}",
+            intentos_agotados=intentos_agotados,
+            respuestas_guardadas=json.dumps(self.respuestas_alumno) if self.respuestas_alumno else "{}"
         )
         
         frag = Fragment(html_base)
@@ -112,25 +141,48 @@ class IAAssistantXBlock(XBlock):
         Recibe las respuestas y delega la evaluación. 
         Solo publica la nota si el proceso fue exitoso.
         """
+
+        MAX_INTENTOS = 1
+        if self.intentos_realizados >= MAX_INTENTOS:
+            logger.warning("IA Assistant: Alumno intentó enviar de nuevo pero ya agotó sus intentos.")
+            return {
+                "resultado": "error", 
+                "mensaje": "Ya has agotado tus intentos permitidos para esta evaluación."
+            }
+
         logger.info("IA Assistant: Procesando entrega del alumno...")
-        
         resultado = calcular_nota_final(data, self.unidad_json)
         
         # --- BLINDAJE DE LÓGICA ---
         # Solo publicamos la nota si la IA y el evaluador respondieron 'ok'
         if resultado.get('resultado') == 'ok':
+            # 2. INCREMENTAR INTENTO SOLO SI TODO SALIÓ BIEN
+            self.intentos_realizados += 1 
+            self.feedback_guardado = resultado
+
             nota_final = resultado.get('nota', 0)
-            
-            # Publicar nota en Open edX (escala 0.0 a 1.0)
             self.runtime.publish(self, 'grade', {
                 'value': nota_final / 100.0, 
                 'max_value': 1.0
             })
-            logger.info(f"IA Assistant: Nota de {nota_final} publicada para el alumno.")
+            logger.info(f"IA Assistant: Nota de {nota_final} publicada.")
         else:
             logger.error(f"IA Assistant: Fallo en calificación. Mensaje: {resultado.get('mensaje')}")
         
         return resultado
+
+    # -----------------------------------------------------------------------
+    # HANDLER DE AUTOGUARDADO
+    # -----------------------------------------------------------------------
+    @XBlock.json_handler
+    def guardar_progreso(self, data, suffix=''):
+        """ Guarda el borrador de las respuestas del alumno en tiempo real. """
+        try:
+            self.respuestas_alumno = data
+            return {"resultado": "ok", "mensaje": "Progreso guardado"}
+        except Exception as e:
+            logger.error(f"Error al guardar progreso: {str(e)}")
+            return {"resultado": "error", "mensaje": str(e)}
 
     @staticmethod
     def workbench_scenarios():

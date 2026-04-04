@@ -12,7 +12,7 @@ load_dotenv()
 
 # Lista de modelos IA
 MODELOS_FALLBACK = [
-    "qwen/qwen3.6-plus-preview:free",
+    "qwen/qwen3.6-plus:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "qwen/qwen3.6-plus:free"

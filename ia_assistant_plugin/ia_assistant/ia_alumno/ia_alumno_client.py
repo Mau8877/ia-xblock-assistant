@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # Mantenemos la lista para failover - Priorizando estabilidad
 MODELOS_FALLBACK = [
-    "qwen/qwen3.6-plus-preview:free",
+    "qwen/qwen3.6-plus:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "google/gemini-2.0-flash-lite-preview-02-05:free"
@@ -19,48 +19,53 @@ MODELOS_FALLBACK = [
 
 def evaluar_respuestas_batch(lista_tareas):
     """
-    Evalúa un lote de tareas con máxima resiliencia.
+    Evalúa un lote de respuestas (abiertas y código) usando IA.
+    Sincronizado con los IDs descriptivos y puntos clave del docente.
     """
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
-        logger.error("Evaluador: API Key no encontrada en el entorno.")
+        logger.error("Evaluador: API Key no encontrada.")
         return None
 
     client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
 
-    # 1. Construcción del Prompt de Usuario
-    prompt_tareas = ""
-    for idx, tarea in enumerate(lista_tareas):
+    # 1. Construcción del Prompt de Usuario (Data Cruda para la IA)
+    prompt_tareas = "LISTA DE TAREAS A CALIFICAR:\n"
+    for tarea in lista_tareas:
         tipo = tarea.get('tipo', 'abierta').upper()
-        lang = f"({tarea.get('lenguaje', '')})" if tipo == 'CODIGO' else ""
-        prompt_tareas += f"\n--- Tarea ID: {tarea.get('id')} [{tipo} {lang}] ---\n"
-        prompt_tareas += f"Enunciado: {tarea['enunciado']}\n"
-        prompt_tareas += f"Criterios/Puntos Clave: {tarea.get('puntos_clave', 'N/A')}\n"
-        prompt_tareas += f"Respuesta del Estudiante: {tarea['respuesta']}\n"
+        # Sincronizamos con los campos que enviamos desde calcular_nota.py
+        prompt_tareas += f"\n[ID: {tarea.get('id')}] - TIPO: {tipo}\n"
+        prompt_tareas += f"ENUNCIADO: {tarea.get('enunciado')}\n"
+        prompt_tareas += f"CRITERIOS DE EVALUACIÓN (PUNTOS CLAVE): {tarea.get('puntos_clave')}\n"
+        prompt_tareas += f"RESPUESTA DEL ESTUDIANTE: {tarea.get('respuesta')}\n"
+        prompt_tareas += "-----------------------------------\n"
 
-    system_prompt = """
-    Actúa como un Evaluador Académico Senior de Ingeniería de Sistemas. 
-    Tu objetivo es calificar respuestas de estudiantes del 0 al 100.
-    
-    INSTRUCCIONES:
-    1. Sé justo pero riguroso con la sintaxis en componentes de CÓDIGO.
-    2. En PREGUNTAS ABIERTAS, busca la presencia de los 'Puntos Clave'.
-    3. Tu respuesta debe ser exclusivamente un objeto JSON.
-    4. USA LOS MISMOS 'id' que se te proporcionan en cada tarea.
+    # 2. System Prompt: Define la personalidad y el rigor del calificador
+    system_prompt = """Eres el Sistema de Evaluación 'Afrodita' de la UAGRM. 
+        Tu tarea es calificar tareas de Ingeniería de Sistemas con objetividad técnica.
 
-    FORMATO DE RESPUESTA:
-    {
-      "evaluaciones": [
-        {"id": "id_recibido", "nota": 0-100, "feedback": "Breve explicación técnica"}
-      ]
-    }
-    """
+        REGLAS DE EVALUACIÓN:
+        1. Usa el campo 'CRITERIOS DE EVALUACIÓN' como guía estricta. Si el alumno no menciona los puntos clave, resta puntos proporcionalmente.
+        2. Para CÓDIGO: Valida lógica, sintaxis y eficiencia. Si el código no resuelve el enunciado, la nota no debe superar 40.
+        3. Para ABIERTAS: Valida coherencia y terminología técnica.
+        4. Tu respuesta debe ser UNICAMENTE un objeto JSON válido.
 
-    # 2. Bucle de Failover entre modelos
+        FORMATO DE RESPUESTA (ESTRICTO):
+        {
+        "evaluaciones": [
+            {
+            "id": "id_exacto_recibido", 
+            "nota": 0-100, 
+            "feedback": "Explicación técnica breve (máx 200 caracteres) de por qué esa nota."
+            }
+        ]
+        }"""
+
+    # 3. Bucle de Resiliencia (Failover)
     for modelo in MODELOS_FALLBACK:
         for intento in range(2):
             try:
-                logger.info(f"Evaluando con {modelo} (Intento {intento+1})...")
+                logger.info(f"Afrodita: Evaluando con {modelo} (Intento {intento+1})...")
                 
                 res = client.chat.completions.create(
                     model=modelo,
@@ -69,39 +74,23 @@ def evaluar_respuestas_batch(lista_tareas):
                         {"role": "user", "content": prompt_tareas}
                     ],
                     response_format={ "type": "json_object" },
-                    timeout=50 # Un poco más de tiempo para evaluaciones complejas
+                    timeout=60 
                 )
                 
                 respuesta_raw = res.choices[0].message.content
-
-                # --- LIMPIEZA Y VALIDACIÓN ---
+                # Limpieza por si la IA devuelve basura antes del JSON
                 match = re.search(r'\{.*\}', respuesta_raw, re.DOTALL)
                 
                 if match:
-                    respuesta_ia = match.group(0)
-                    try:
-                        data_eval = json.loads(respuesta_ia)
-                        # Verificamos que tenga la estructura mínima requerida
-                        if "evaluaciones" in data_eval:
-                            logger.info(f"Evaluación exitosa con {modelo}")
-                            return data_eval
-                    except json.JSONDecodeError:
-                        logger.warning(f"JSON incompleto de {modelo}. Intentando de nuevo...")
-                        continue
-                else:
-                    logger.warning(f"No se detectó estructura JSON en la respuesta de {modelo}.")
-                    continue
-
-            except Exception as e:
-                error_str = str(e)
-                # Manejo de errores de red o cuotas
-                if any(err in error_str for err in ["429", "provider", "timeout"]):
-                    logger.warning(f"Fallo temporal en {modelo}: {error_str}. Reintentando...")
-                    time.sleep(2)
-                    continue 
+                    data_eval = json.loads(match.group(0))
+                    if "evaluaciones" in data_eval:
+                        logger.info(f"Afrodita: Éxito con {modelo}")
+                        return data_eval
                 
-                logger.error(f"Fallo crítico en {modelo}: {error_str}")
-                break # Pasar al siguiente modelo de la lista
+            except Exception as e:
+                logger.warning(f"Fallo temporal con {modelo}: {str(e)}")
+                time.sleep(1)
+                continue # Reintenta o pasa al siguiente modelo
 
-    logger.critical("Error: Todos los modelos del Fallback fallaron.")
+    logger.critical("Afrodita: Todos los modelos fallaron.")
     return None

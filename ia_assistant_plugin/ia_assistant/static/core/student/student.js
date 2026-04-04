@@ -1,73 +1,34 @@
+// archivo: static/core/student/student.js
 function StudentMasterInit(runtime, element) {
     var $el = $(element);
     var startTime = Date.now();
     var handlerUrl = runtime.handlerUrl(element, 'calificar_unidad');
 
     function obtenerDataRespuestas() {
-        var respuestas = {};
-        
-        // Recolectar Quizzes
+        var quizId = $el.find('.ia-comp-quiz').attr('id');
+        var dataFinal = { respuestas_quiz: { puntaje: 0, detalles: {}, id: quizId }, respuestas_abiertas: [], respuestas_codigo: [] };
+
+        var correctas = 0; var totalQ = $el.find('.ia-pregunta').length;
         $el.find('.ia-pregunta').each(function() {
-            var name = $(this).find('input').attr('name');
-            var valor = $(this).find('input:checked').val();
-            if (valor !== undefined) respuestas[name] = valor;
+            var correcta = String($(this).attr('data-correcta')); 
+            var seleccionada = $(this).find('input:checked').val();
+            if (seleccionada !== undefined && String(seleccionada) === correcta) correctas++;
         });
+        
+        var puntajeCrudo = totalQ > 0 ? (correctas / totalQ) * 100 : 0;
+        dataFinal.respuestas_quiz.puntaje = parseFloat(puntajeCrudo.toFixed(2));
 
-        // Recolectar Abiertas
         $el.find('.ia-comp-abierta').each(function() {
-            var id = $(this).attr('id');
-            var texto = $(this).find('textarea').val();
-            respuestas[id] = texto;
+            var idVal = $(this).attr('id');
+            if (idVal) dataFinal.respuestas_abiertas.push({ id: idVal, texto: $(this).find('.respuesta-alumno').val() });
         });
 
-        // Recolectar Código
         $el.find('.ia-comp-codigo').each(function() {
-            var id = $(this).attr('id');
-            var codigo = $(this).find('.code-input').val();
-            respuestas[id] = codigo;
+            var idVal = $(this).attr('id');
+            if (idVal) dataFinal.respuestas_codigo.push({ id: idVal, texto: $(this).find('.code-input').val() });
         });
 
-        return respuestas;
-    }
-
-    function generarResumenRevision() {
-        var $summary = $el.find('#revision-summary');
-        
-        // 1. Quizzes
-        var tQuiz = $el.find('.ia-comp-quiz .ia-pregunta').length;
-        var rQuiz = $el.find('.ia-comp-quiz .ia-pregunta').filter(function() { 
-            return $(this).find('input:checked').length > 0; 
-        }).length;
-
-        // 2. Abiertas (Solo busca dentro de su propio contenedor)
-        var $contenedorAbiertas = $el.find('.ia-comp-abierta');
-        var tAbierta = $contenedorAbiertas.length;
-        var rAbierta = $contenedorAbiertas.filter(function() {
-            var texto = $(this).find('textarea').val() || "";
-            return texto.trim().length > 15; // Consideramos respondida si escribió algo sustancial
-        }).length;
-
-        // 3. Código (Solo busca dentro de su propio contenedor y descuenta el base)
-        var $contenedorCodigo = $el.find('.ia-comp-codigo');
-        var tCodigo = $contenedorCodigo.length;
-        var rCodigo = $contenedorCodigo.filter(function() {
-            var $area = $(this).find('textarea');
-            var actual = $area.val() || "";
-            var baseLen = parseInt($(this).data('base-len')) || 0;
-            
-            // Si el texto actual es al menos 5 caracteres más largo que el inicial, 
-            // asumimos que el alumno trabajó.
-            return actual.trim().length > (baseLen + 5);
-        }).length;
-
-        var html = `
-            <div class="summary-results">
-                <p>✅ <b>Quizzes:</b> ${rQuiz} de ${tQuiz} preguntas.</p>
-                <p>✍️ <b>Abiertas:</b> ${rAbierta} de ${tAbierta} respondidas.</p>
-                <p>💻 <b>Código:</b> ${rCodigo} de ${tCodigo} completados.</p>
-            </div>`;
-        
-        $summary.html(html);
+        return dataFinal;
     }
 
     function organizarComponentes() {
@@ -77,20 +38,19 @@ function StudentMasterInit(runtime, element) {
         $el.find('.ia-comp-codigo').detach().appendTo($el.find('#tab-codigo'));
 
         $el.find('.tab-content').each(function() {
-            if ($(this).children().not('.empty-state, h3, #revision-summary, .ia-master-actions, p, hr, #master-feedback').length > 0) {
+            if ($(this).children().not('.empty-state, h3, #revision-summary, .ia-master-actions, p, hr, #master-feedback, .ia-revision-container').length > 0) {
                 $(this).find('.empty-state').hide();
             }
         });
-        $el.find('.tab-btn[data-target="tab-teoria"]').trigger('click');
     }
 
     // --- ACCIÓN DE ENVÍO ---
     $el.find('#btn-enviar-master').click(function() {
         var $btn = $(this);
-        var $feedback = $el.find('#master-feedback');
+        var $feedbackArea = $el.find('#master-feedback');
         
-        $btn.text('Enviando a la IA...').prop('disabled', true);
-        $feedback.hide().html('');
+        $btn.text('Evaluando con Afrodita...').prop('disabled', true);
+        $feedbackArea.hide();
 
         $.ajax({
             type: "POST",
@@ -98,30 +58,74 @@ function StudentMasterInit(runtime, element) {
             data: JSON.stringify(obtenerDataRespuestas()),
             success: function(data) {
                 $btn.text('Enviar Evaluación Completa').prop('disabled', false);
-                $feedback.fadeIn();
                 
                 if (data.resultado === 'ok') {
-                    var html = `
-                        <div class="ia-score-card">
-                            <h4>Calificación: ${data.nota}/100</h4>
-                            <div class="ia-feedback-text">${data.mensaje_feedback}</div>
-                        </div>`;
-                    $feedback.html(html).css('border-left', '5px solid #28a745');
+                    // 1. Limpieza de colores previos en componentes
+                    $el.find('.ia-pregunta, .ia-comp-abierta, .ia-comp-codigo, .ia-comp-quiz').removeClass('is-correct is-incorrect');
+
+                    // 2. Aplicar feedback in-situ en las otras pestañas
+                    data.feedback.forEach(function(item) {
+                        var $target = $el.find('#' + item.id);
+
+                        if ($target.length > 0) {
+                            var statusClass = (item.nota >= 51) ? 'is-correct' : 'is-incorrect';
+                            $target.addClass(statusClass);
+
+                            // Inyección de feedback in-situ
+                            var $fbContainer = $target.find('.feedback-ia');
+                            if ($fbContainer.length > 0) {
+                                $fbContainer.find('.fb-text').html('<b>Afrodita dice:</b> ' + item.detalle);
+                                $fbContainer.removeAttr('style').css({'display': 'block', 'visibility': 'visible', 'opacity': '1'});
+                                $fbContainer.hide().fadeIn(600);
+                            }
+
+                            // Colorear radios del Quiz
+                            if (item.tipo === 'Quiz' || $target.hasClass('ia-comp-quiz')) {
+                                $target.find('.ia-pregunta').each(function() {
+                                    var $q = $(this);
+                                    var correcta = String($q.attr('data-correcta'));
+                                    var seleccionada = $q.find('input:checked').val();
+                                    $q.removeClass('is-correct is-incorrect');
+                                    if (seleccionada !== undefined && String(seleccionada) === correcta) $q.addClass('is-correct');
+                                    else $q.addClass('is-incorrect');
+                                });
+                            }
+                        }
+                    });
+
+                    // 3. DELEGAR LA PESTAÑA REVISIÓN AL MÓDULO EXTERNO
+                    if (window.IA_Components && window.IA_Components.Revision) {
+                        window.IA_Components.Revision.pintarFeedbackFinal($el, data);
+                    }
+
                 } else {
-                    $feedback.html('<p>❌ Error: ' + data.mensaje + '</p>').css('border-left', '5px solid #dc3545');
+                    $feedbackArea.html('<p class="error-msg">❌ ' + data.mensaje + '</p>').show();
                 }
+            },
+            error: function(xhr, status, error) {
+                $btn.text('Enviar Evaluación Completa').prop('disabled', false);
+                $feedbackArea.html('<p class="error-msg">❌ Error de conexión: ' + error + '</p>').show();
             }
         });
     });
 
+    // --- MANEJO DE TABS ---
     $el.find('.tab-btn').on('click', function(e) {
         e.preventDefault();
         var target = $(this).data('target');
+        
         $el.find('.tab-btn').removeClass('active');
         $(this).addClass('active');
+        
         $el.find('.tab-content').hide();
         $el.find('#' + target).show();
-        if(target === 'tab-revision') generarResumenRevision();
+        
+        // Llamada al módulo externo para generar el resumen
+        if (target === 'tab-revision') {
+            if (window.IA_Components && window.IA_Components.Revision) {
+                window.IA_Components.Revision.generarResumen($el);
+            }
+        }
     });
 
     setInterval(function() {
@@ -131,5 +135,5 @@ function StudentMasterInit(runtime, element) {
         $el.find('#ia-timer').text(mins + ':' + secs);
     }, 1000);
 
-    setTimeout(organizarComponentes, 1000);
+    setTimeout(organizarComponentes, 500);
 }

@@ -1,4 +1,3 @@
-// Este objeto global guardará las funciones de evaluación de todos los componentes
 window.IA_Components = window.IA_Components || {};
 
 window.IA_Components.evaluarQuiz = function(element) {
@@ -8,14 +7,22 @@ window.IA_Components.evaluarQuiz = function(element) {
     $('.ia-pregunta', element).each(function() {
         total++;
         var qElem = $(this);
-        var correctaIdx = qElem.attr('data-correcta');
+        
+        // FORZAMOS A STRING PARA EVITAR ERRORES DE TIPO
+        var correctaIdx = String(qElem.attr('data-correcta')); 
         var seleccionadaIdx = qElem.find('input[type="radio"]:checked').val();
         
-        if (seleccionadaIdx === correctaIdx) {
+        qElem.removeClass('is-correct is-incorrect');
+
+        if (seleccionadaIdx === undefined) {
+            qElem.addClass('is-incorrect');
+        } 
+        // USAMOS == O FORZAMOS String(seleccionadaIdx)
+        else if (String(seleccionadaIdx) === correctaIdx) {
             correctas++;
-            qElem.css('border-left-color', '#28a745'); // Verde si está bien
+            qElem.addClass('is-correct');
         } else {
-            qElem.css('border-left-color', '#dc3545'); // Rojo si está mal
+            qElem.addClass('is-incorrect');
         }
     });
     

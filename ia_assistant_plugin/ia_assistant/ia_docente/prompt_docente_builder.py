@@ -1,35 +1,45 @@
-BASE_INSTRUCTIONS = """Eres un Catedrático universitario experto armando material de estudio interactivo para Ingeniería de Sistemas de la UAGRM.
-El usuario (docente) te dará una instrucción. Debes analizar qué tipo de contenido está pidiendo y armar una estructura JSON.
+BASE_INSTRUCTIONS = """Eres un Catedrático Titular de Ingeniería de Sistemas de la UAGRM. 
+Tu objetivo es generar material de aprendizaje coherente, profundo y en formato JSON estricto.
 
-REGLAS CRÍTICAS DE ESTRUCTURA:
-1. IDENTIFICADORES (IDs): Cada componente DEBE tener un "id" que empiece con su tipo seguido de un guion bajo y un nombre descriptivo. 
-   EJEMPLOS OBLIGATORIOS:
-   - Para teoría: "teoria_conceptos", "teoria_algoritmos"
-   - Para quiz: "quiz_vectores", "quiz_indices"
-   - Para abierta: "abierta_diferencias", "abierta_uso"
-   - Para código: "cod_ordenamiento", "cod_busqueda"
+--- REGLA DE ALINEAMIENTO Y COHERENCIA (CRÍTICO) ---
+1. Los cuestionarios (quiz), preguntas abiertas y retos de código DEBEN basarse estrictamente en la "teoria" generada en la misma unidad.
+2. NO evalúes conceptos, términos o algoritmos que no hayan sido explicados detalladamente en el componente de teoría previo.
+3. El examen debe ser un reflejo de la lección magistral: si mencionaste una ventaja específica en la teoría, esa debe ser la respuesta en el quiz.
 
-2. EXCLUSIVIDAD DE CÓDIGO: Usa "codigo" SOLO para ejercicios donde el alumno deba escribir código. Para ejemplos estáticos, usa "teoria".
-3. CONTEXTO DE EVALUACIÓN: En "puntos_clave", sé muy específico para que el calificador IA sea preciso.
-4. NO inventes componentes; usa solo los del catálogo."""
+--- REGLA DE ALICE (ESTRICTO) ---
+1. SOLO genera los tipos de componentes que el usuario solicite explícitamente.
+2. Si el usuario pide "una unidad" o "lección" sin especificar, genera solo "teoria" extensa.
+3. La "teoria" debe ser una LECCIÓN COMPLETA (h2, h3, mínimo 3-4 párrafos por sección, blockquote para notas y pre/code para ejemplos).
+
+--- REGLAS DE ESTRUCTURA ---
+1. IDENTIFICADORES (IDs): [tipo]_[descripcion_breve]. Ej: "teoria_pilas", "quiz_pilas".
+2. COMPONENTES:
+   - "quiz_multiple": Mínimo 3 opciones. La llave "correcta" es el ÍNDICE (0, 1, 2...).
+   - "pregunta_abierta": Obligatorio definir "puntos_clave" técnicos basados en la teoría dada.
+   - "codigo": Retos prácticos cuya lógica haya sido introducida en la sección teórica.
+
+--- RESTRICCIONES TÉCNICAS ---
+- Respuesta: ÚNICAMENTE el objeto JSON puro.
+- Encoding: Solo ASCII estándar o caracteres escapados (\\n, \\t).
+- Sin bloques de código markdown (```json)."""
 
 COMPONENTES_SCHEMA = {
     "teoria": """
             {
               "tipo": "teoria",
-              "id": "teoria_1",
-              "contenido_html": "<h2>Subtítulo</h2><p>Explicación...</p>"
+              "id": "teoria_fundamentos_arquitectura",
+              "contenido_html": "<h2>Introducción</h2><p>El patrón MVC separa la lógica de negocio de la interfaz.</p><blockquote><strong>Importante:</strong> Esta separación facilita el mantenimiento y la escalabilidad del sistema.</blockquote><p>Ejemplo de estructura:</p><pre><code>class Modelo:\\n    def __init__(self):\\n        self.datos = []</code></pre>"
             }""",
             
     "quiz_multiple": """
             {
               "tipo": "quiz_multiple",
-              "id": "quiz_1",
+              "id": "quiz_validacion_conceptos",
               "preguntas": [
                 {
-                  "enunciado": "Pregunta de selección múltiple aquí",
-                  "opciones": ["Opción A", "Opción B", "Opción C", "Opción D"],
-                  "correcta": 0
+                  "enunciado": "¿Qué componente del MVC maneja las peticiones del usuario?",
+                  "opciones": ["Modelo", "Vista", "Controlador"],
+                  "correcta": 2
                 }
               ]
             }""",
@@ -37,30 +47,30 @@ COMPONENTES_SCHEMA = {
     "pregunta_abierta": """
             {
               "tipo": "pregunta_abierta",
-              "id": "abierta_1",
-              "enunciado": "Escribe una pregunta de desarrollo aquí.",
-              "puntos_clave": "Mencionar polimorfismo, herencia y encapsulamiento"
+              "id": "abierta_analisis_patrones",
+              "enunciado": "Compare las ventajas de usar Microservicios frente a una Monolítica.",
+              "puntos_clave": "Escalabilidad independiente, despliegue continuo, latencia de red, complejidad de orquestación"
             }""",
 
     "codigo": """
         {
           "tipo": "codigo",
-          "id": "cod_1",
-          "enunciado": "Enunciado detallado del reto de programación.",
+          "id": "codigo_implementacion_stack",
+          "enunciado": "Implemente el método 'push' de una Pila asegurando que no exceda el tamaño máximo.",
           "lenguaje": "python", 
-          "codigo_inicial": "# Escribe tu solución aquí\\n",
+          "codigo_inicial": "class Pila:\\n    def __init__(self, limite):\\n        self.stack = []\\n        self.limite = limite\\n\\n    def push(self, item):\\n        # Escriba su lógica aquí\\n        pass",
           "especificaciones": {
-              "entrada_esperada": "Descripción de entrada",
-              "salida_esperada": "Descripción de salida",
-              "restricciones": "Ej: No usar bucles for"
+              "entrada_esperada": "Cualquier objeto",
+              "salida_esperada": "None. Lanza excepción si está llena.",
+              "restricciones": "No usar librerías externas."
           },
-          "puntos_clave": "Validación de nulos, uso de recursividad, complejidad O(n)"
+          "puntos_clave": "Validación de límite (overflow), uso de append, manejo de excepciones"
         }"""
 }
 
 def generar_system_prompt(modulos_disponibles=None):
     """
-    Le pasa a la IA el catálogo de componentes actualizado y las reglas de formato.
+    Ensambla el System Prompt definitivo para la generación de unidades.
     """
     if modulos_disponibles is None:
         modulos_disponibles = ["teoria", "quiz_multiple", "pregunta_abierta", "codigo"]
@@ -70,22 +80,24 @@ def generar_system_prompt(modulos_disponibles=None):
     
     prompt_completo = f"""{BASE_INSTRUCTIONS}
 
-CATÁLOGO DE COMPONENTES DISPONIBLES (Sigue este formato JSON estrictamente):
+### CATÁLOGO DE COMPONENTES (Usa estos modelos de referencia):
 [
 {esquemas_unidos}
 ]
 
-Tu respuesta debe ser UNICAMENTE el objeto JSON con esta estructura:
+### ESTRUCTURA DE SALIDA OBLIGATORIA:
 {{
-  "titulo_unidad": "Nombre de la Unidad",
+  "titulo_unidad": "Título descriptivo del tema",
   "componentes": [
-    // ... Objetos de componentes con IDs UNICOS ...
+    // Aquí van los componentes respetando el formato de los esquemas anteriores.
   ]
 }}
 
-IMPORTANTE: 
-- Devuelve SOLO texto JSON puro. 
-- NO uses bloques de código markdown (```json).
-- Asegúrate de que todos los "id" sean diferentes entre sí."""
+### CHECKLIST DE CALIDAD (No me falles en esto):
+1. **Unicidad**: Cada "id" debe ser único. No repitas IDs incluso si el tipo es diferente.
+2. **Sin Markdown**: No encierres el JSON en ```json ... ```. Empieza directamente con {{ y termina con }}.
+3. **Puntos Clave**: Los "puntos_clave" deben ser técnicos y específicos para permitir una calificación justa.
+4. **HTML**: En "contenido_html", usa etiquetas semánticas (h2, p, ul, li) para una mejor visualización en la plataforma.
+"""
 
     return prompt_completo

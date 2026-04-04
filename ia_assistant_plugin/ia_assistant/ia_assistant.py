@@ -96,6 +96,7 @@ class IAAssistantXBlock(XBlock):
         # Recursos base del "Chasis" del estudiante
         frag.add_css(load_resource("static/core/student/student.css"))
         frag.add_javascript(load_resource("static/core/student/student.js"))
+        frag.add_javascript(load_resource("static/components/revision/revision.js"))
         frag.initialize_js('StudentMasterInit')
         
         print(f"DEBUG: El JSON en la base de datos es: {self.unidad_json}")

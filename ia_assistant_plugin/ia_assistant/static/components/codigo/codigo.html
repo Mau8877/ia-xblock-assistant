@@ -1,14 +1,26 @@
-<div class="ia-comp-codigo" data-id="{id}" data-tipo="codigo" data-lenguaje="{lenguaje}">
+<div class="ia-codigo-interior">
     <div class="code-header">
-        <div class="lang-tag">💻 Terminal: {lenguaje}</div>
-        <p class="enunciado-codigo"><strong>Reto:</strong> {enunciado}</p>
-        
+        <div class="code-header-top">
+            <span class="lang-tag">Terminal: {lenguaje}</span>
+        </div>
+        <div class="enunciado-codigo">
+            <strong>Enunciado:</strong> {enunciado}
+        </div>
         <div class="specs-box">
-            <span><b>Input:</b> {entrada}</span> | <span><b>Output:</b> {salida}</span>
+            <div class="spec-item"><span class="spec-label">Input:</span> {entrada}</div>
+            <div class="spec-item"><span class="spec-label">Output:</span> {salida}</div>
         </div>
     </div>
-    
+
     <div class="editor-wrapper">
-        <textarea class="code-input" autocomplete="off" spellcheck="false" placeholder="Escribe tu código aquí...">{codigo_inicial}</textarea>
+        <textarea class="code-input" autocomplete="off" spellcheck="false"
+            placeholder="# Escribe tu código aquí...">{codigo_inicial}</textarea>
+    </div>
+
+    <div class="feedback-ia" style="display:none;">
+        <div class="fb-content">
+            <span class="fb-icon">🤖</span>
+            <div class="fb-text"></div>
+        </div>
     </div>
 </div>

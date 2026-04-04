@@ -4,7 +4,7 @@
             <span class="ia-badge">Afrodita IA v0.2.0</span>
             <h2>{unidad_titulo}</h2>
         </div>
-        </div>
+    </div>
 
     <nav class="ia-tabs-nav">
         <button class="tab-btn active" data-target="tab-teoria">📖 Teoría</button>
@@ -20,20 +20,33 @@
         <div id="tab-teoria" class="tab-content active-content">
             <div class="empty-state">No hay contenido de teoría.</div>
         </div>
-        <div id="tab-quiz" class="tab-content"><div class="empty-state">No hay quizzes.</div></div>
-        <div id="tab-abierta" class="tab-content"><div class="empty-state">No hay preguntas abiertas.</div></div>
-        <div id="tab-codigo" class="tab-content"><div class="empty-state">No hay retos de código.</div></div>
+        <div id="tab-quiz" class="tab-content">
+            <div class="empty-state">No hay quizzes.</div>
+        </div>
+        <div id="tab-abierta" class="tab-content">
+            <div class="empty-state">No hay preguntas abiertas.</div>
+        </div>
+        <div id="tab-codigo" class="tab-content">
+            <div class="empty-state">No hay retos de código.</div>
+        </div>
 
         <div id="tab-revision" class="tab-content">
-            <h3>Resumen de tu Evaluación</h3>
-            <p>Revisa tus respuestas antes de enviar.</p>
-            <hr class="ia-divider">
-            <div id="revision-summary"></div>
-            
-            <div class="ia-master-actions">
-                <button id="btn-enviar-master" class="btn-primary">Enviar Evaluación Completa</button>
+            <div class="ia-revision-container">
+                <div class="revision-header">
+                    <h3><i class="fas fa-clipboard-check"></i> Resumen de tu Evaluación</h3>
+                    <p>Revisa tus respuestas antes de solicitar la calificación. <b>(Modo solo lectura)</b></p>
+                </div>
+
+                <div id="revision-dinamica" class="revision-content"></div>
+
+                <hr class="ia-divider">
+
+                <div class="ia-master-actions">
+                    <button id="btn-enviar-master" class="btn-primary">Enviar Evaluación Completa</button>
+                </div>
+
+                <div id="master-feedback" class="ia-feedback-area" style="display: none; margin-top: 20px;"></div>
             </div>
-            <div id="master-feedback" class="ia-feedback-area" style="display: none; margin-top: 20px;"></div>
         </div>
     </div>
 

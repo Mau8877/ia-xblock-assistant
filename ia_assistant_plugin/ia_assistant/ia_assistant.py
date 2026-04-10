@@ -68,36 +68,62 @@ class IAAssistantXBlock(XBlock):
         frag = Fragment(html_formateado)
         frag.add_css(load_resource("static/core/studio/studio.css"))
         frag.add_javascript(load_resource("static/core/studio/studio.js"))
-        frag.initialize_js('StudioDocenteInit')
+        frag.initialize_js('STUDIO_DOCENTE_INIT')
         return frag
 
+    # -----------------------------------------------------------------------
+    # HANDLERS DE STUDIO (Nuevo Flujo de 2 Pasos)
+    # -----------------------------------------------------------------------
+    
     @XBlock.json_handler
-    def guardar_prompt(self, data, suffix=''):
+    def generar_borrador_ia(self, data, suffix=''):
         """ 
-        Handler Ajax que delega la generación a ia_docente_client. 
+        Paso 1: Solo genera el contenido y lo devuelve a la pantalla.
+        NO lo guarda en la base de datos de los alumnos todavía.
         """
         nuevo_prompt = data.get('prompt', '')
-        self.prompt_docente = nuevo_prompt 
+        self.prompt_docente = nuevo_prompt # Guardamos el borrador del prompt
 
-        logger.info(f"IA Assistant: Iniciando generación para docente...")
-        
+        logger.info(f"IA Assistant: Iniciando generación de borrador para docente...")
+
+
+
         # Delegación a la lógica de negocio en ia_docente
         resultado = generar_contenido_unidad(nuevo_prompt)
 
         if resultado['resultado'] == 'ok':
-            self.unidad_json = resultado['json_unidad']
-            logger.info("IA Assistant: Unidad generada y persistida exitosamente.")
-            return {"resultado": "ok", "mensaje": "Unidad generada correctamente."}
+            logger.info("IA Assistant: Borrador generado, enviando a vista previa.")
+            return {
+                "resultado": "ok", 
+                "contenido_crudo": resultado['json_unidad'] # Se va directo al textarea derecho
+            }
         else:
             return resultado
 
+    @XBlock.json_handler
+    def guardar_unidad_editada(self, data, suffix=''):
+        """ 
+        Paso 2: Recibe el contenido que el profesor ya editó manualmente
+        en la vista previa, y ahora sí lo guarda como la unidad final.
+        """
+        contenido_final = data.get('contenido_final', '').strip()
+        
+        if not contenido_final:
+            return {"resultado": "error", "mensaje": "El contenido editado está vacío."}
+            
+        # Guardamos definitivamente el contenido en el bloque del curso
+        self.unidad_json = contenido_final
+        logger.info("IA Assistant: Unidad editada manualmente y persistida exitosamente.")
+        
+        return {"resultado": "ok", "mensaje": "Unidad publicada."}
+    
     # -----------------------------------------------------------------------
     # VISTA STUDENT (Interfaz del Alumno)
     # -----------------------------------------------------------------------
     def student_view(self, context=None):
         """ Ensambla dinámicamente los componentes de la unidad. """
         
-        #return self.studio_view(context)
+        return self.studio_view(context)
 
         json_crudo = self.unidad_json if self.unidad_json else "{}"
         

@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 # Mantenemos la lista para failover - Priorizando estabilidad
 MODELOS_FALLBACK = [
-    "qwen/qwen3.6-plus:free",
+    "qwen/qwen3-coder:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
+    "nvidia/nemotron-3-nano-30b-a3b:free",
     "google/gemini-2.0-flash-lite-preview-02-05:free"
 ]
 

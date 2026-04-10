@@ -1,62 +1,95 @@
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
 <div class="ia-assistant-studio">
-    <div class="studio-header">
-        <div class="brand-badge">🤖 IA - Modo Docente</div>
-        <h2>Generador de Unidad Interactiva</h2>
-        <p class="subtitle">Diseña el contenido de tu clase. La IA generará el material basándose exactamente en tus
-            instrucciones.</p>
-    </div>
+    <div class="studio-top">
+        <div class="studio-header">
+            <div class="brand-badge">🤖 IA - Modo Docente</div>
+            <h2>Generador de Unidad Interactiva</h2>
+            <p class="subtitle">1. Dale instrucciones a la IA. 2. Revisa el contenido generado. 3. Guarda y publica.</p>
+        </div>
 
-    <div class="prompt-container">
-        <label for="prompt-input" class="prompt-label">Instrucciones para la IA:</label>
-        <textarea id="prompt-input" rows="6"
-            placeholder="Ej: Genera una unidad sobre 'Estructuras de Datos: Pilas y Colas' en Java. Incluye teoría con ejemplos, un quiz de 3 preguntas y 1 reto de código nivel intermedio.">{prompt_docente}</textarea>
-
-        <div class="prompt-guide">
-            <h4 class="guide-title">💡 Guía para generar el mejor contenido</h4>
-
-            <div class="guide-grid">
-                <div class="guide-card">
-                    <span class="guide-icon">🧩</span>
-                    <div class="guide-text">
-                        <strong>Elige tus componentes</strong>
-                        Pide explícitamente lo que necesitas: Teoría, Quizzes, Preguntas de Análisis o Retos de Código.
-                        Si no lo pides, no se genera.
-                    </div>
+        <div class="generator-layout">
+            <div class="prompt-section">
+                <label for="prompt-input" class="prompt-label">Paso 1: Instrucciones para la IA</label>
+                <textarea id="prompt-input" rows="6"
+                    placeholder="Ej: Genera una unidad sobre 'Estructuras de Datos' en Java. Incluye teoría, un quiz de 3 preguntas y 1 reto de código.">{prompt_docente}</textarea>
+                
+                <div class="actions" style="margin-top: 15px; text-align: left;">
+                    <button id="btn-generar" class="btn-primary">
+                        <span class="btn-icon">✨</span>
+                        <span class="btn-text">Generar Borrador con IA</span>
+                    </button>
                 </div>
+            </div>
 
-                <div class="guide-card">
-                    <span class="guide-icon">🎯</span>
-                    <div class="guide-text">
-                        <strong>Sé específico en cantidades</strong>
-                        En lugar de "pon un examen", usa "Genera un quiz de 3 preguntas" o "Añade 2 preguntas de
-                        análisis crítico".
-                    </div>
-                </div>
-
-                <div class="guide-card">
-                    <span class="guide-icon">💻</span>
-                    <div class="guide-text">
-                        <strong>Contexto técnico</strong>
-                        Para los retos de código, no olvides especificar el lenguaje de programación (Java, Python, C++,
-                        etc.) y la dificultad.
-                    </div>
+            <div class="prompt-guide">
+                <h4 class="guide-title">💡 Guía Rápida</h4>
+                <div class="guide-text">
+                    <strong>🧩 Elige componentes:</strong> Pide Teoría, Quizzes, Preguntas o Código.<br><br>
+                    <strong>🎯 Sé específico:</strong> "Genera un quiz de 3 preguntas" es mejor que "haz un test".
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="actions">
-        <button id="btn-generar" class="btn-primary">
-            <span class="btn-text">Generar y Guardar Unidad</span>
-        </button>
-    </div>
-
-    <div class="mensajes-area">
-        <div id="mensaje-estado" class="alert alert-success" style="display: none;">
-            <strong>✅ ¡Éxito!</strong> La unidad interactiva se ha generado y guardado en la base de datos.
+    <div class="studio-bottom">
+        <div class="editor-header">
+            <h3>Paso 2: Taller de Edición</h3>
+            <div class="main-tabs-nav">
+                <button class="main-tab-btn active" data-target="vista-visual">📝 Editor Visual</button>
+                <button class="main-tab-btn" data-target="vista-codigo">⚙️ Modo Avanzado (JSON)</button>
+            </div>
         </div>
-        <div id="mensaje-error" class="alert alert-error" style="display: none;">
-            <strong>❌ Error:</strong> <span class="error-texto">Ocurrió un problema.</span>
+
+        <div id="vista-visual" class="main-tab-content active">
+            
+            <div class="general-config-card">
+                <label>Título de la Unidad:</label>
+                <input type="text" id="edit-titulo-unidad" class="form-control" placeholder="Ej: Introducción a la Ecología...">
+            </div>
+
+            <nav class="ia-tabs-nav">
+                <button class="sub-tab-btn active" data-target="edit-teoria">Teoría</button>
+                <button class="sub-tab-btn" data-target="edit-quiz">Quizzes</button>
+                <button class="sub-tab-btn" data-target="edit-abierta">Preguntas</button>
+                <button class="sub-tab-btn" data-target="edit-codigo">Código</button>
+            </nav>
+
+            <div class="ia-content-wrapper">
+                <div id="edit-teoria" class="sub-tab-content active-content">
+                    <div class="empty-state">No hay contenido de teoría generado aún.</div>
+                </div>
+                <div id="edit-quiz" class="sub-tab-content">
+                    <div class="empty-state">No hay quizzes generados aún.</div>
+                </div>
+                <div id="edit-abierta" class="sub-tab-content">
+                    <div class="empty-state">No hay preguntas abiertas generadas aún.</div>
+                </div>
+                <div id="edit-codigo" class="sub-tab-content">
+                    <div class="empty-state">No hay retos de código generados aún.</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="vista-codigo" class="main-tab-content">
+            <textarea id="contenido-preview" placeholder="El JSON crudo aparecerá aquí..."></textarea>
+        </div>
+
+        <div class="publish-section">
+            <div class="mensajes-area">
+                <div id="mensaje-estado" class="alert alert-success" style="display: none;">
+                    <strong>✅ ¡Éxito!</strong> La unidad se ha guardado y publicado en el curso.
+                </div>
+                <div id="mensaje-error" class="alert alert-error" style="display: none;">
+                    <strong>❌ Error:</strong> <span class="error-texto">Ocurrió un problema.</span>
+                </div>
+            </div>
+
+            <button id="btn-guardar-final" class="btn-success" disabled>
+                <span class="btn-icon">💾</span>
+                <span class="btn-text">Guardar y Publicar Unidad</span>
+            </button>
         </div>
     </div>
 </div>
